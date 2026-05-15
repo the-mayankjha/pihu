@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIHU - Personal Intelligent Holographic Utility</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <!-- Blur overlay that dynamically adjusts -->
+    <div class="blur-overlay" id="blurOverlay"></div>
+
+    <!-- Main UI Layer -->
+    <main class="ui-layer">
+        
+        <!-- Screen Border Frame -->
+        <div class="screen-frame" id="screenFrame">
+            <div class="frame-top"></div>
+            <div class="frame-bottom"></div>
+        </div>
+
+        <!-- Contextual Overlays (hidden by default) -->
+        <div class="overlay-container top-left hidden" id="automationOverlay">
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <span class="dot purple"></span>
+                    <h3>Workflows</h3>
+                </div>
+                <ul class="workflow-list">
+                    <li><span class="status-icon active"></span> Compiling Codebase</li>
+                    <li><span class="status-icon pending"></span> Syncing Memory</li>
+                    <li><span class="status-icon inactive"></span> Network Scan</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="overlay-container top-right hidden" id="memoryOverlay">
+             <div class="glass-panel">
+                <div class="panel-header">
+                    <span class="dot cyan"></span>
+                    <h3>Memory Core</h3>
+                </div>
+                <div class="memory-stats">
+                    <div class="stat-row"><span>Local DB:</span> <span>Online</span></div>
+                    <div class="stat-row"><span>Vector Count:</span> <span>14,204</span></div>
+                    <div class="stat-row"><span>Last Sync:</span> <span>2m ago</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Console (hidden by default) -->
+        <div class="console-container hidden" id="aiConsole">
+            <div class="glass-panel console-panel">
+                <div class="panel-header">
+                    <span class="dot blue"></span>
+                    <h3>PIHU Console</h3>
+                    <div class="spacer"></div>
+                    <span class="latency">12ms</span>
+                </div>
+                <div class="terminal-body" id="terminalBody">
+                    <div class="terminal-line"><span class="prompt">_></span> System initialized.</div>
+                    <div class="terminal-line"><span class="prompt cyan">*</span> Awaiting command...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Transcription & Waveform -->
+        <div class="transcription-container">
+            <div class="waveform-container hidden" id="waveform">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </div>
+            <div id="transcriptionText" class="transcription-text hidden"></div>
+        </div>
+
+        <!-- The AI Orb -->
+        <div class="orb-container" id="orbContainer">
+            <div class="hologram-ring extra"></div>
+            <div class="hologram-ring outer"></div>
+            <div class="hologram-ring middle"></div>
+            <div class="hologram-ring inner"></div>
+            <div class="orb-core" id="orbCore">
+                <span class="orb-text">P.I.H.U</span>
+            </div>
+            <div class="orb-status-text" id="orbStatus">Idle</div>
+        </div>
+
+    </main>
+
+    <div class="hint-text">Press <strong>Option + P</strong> to activate PIHU</div>
+
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
