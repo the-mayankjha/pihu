@@ -1,0 +1,22 @@
+{
+  "name": "pihu-os",
+  "version": "1.0.0",
+  "main": "main.cjs",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"electron .\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "^42.0.1",
+    "vite": "^8.0.12"
+  },
+  "dependencies": {
+    "@fugood/whisper.node": "^1.0.18",
+    "vosk-browser": "^0.0.8"
+  }
+}
