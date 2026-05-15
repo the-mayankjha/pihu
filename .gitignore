@@ -1,0 +1,4 @@
+node_modules/
+.DS_Store
+app_output.log
+*.bin
