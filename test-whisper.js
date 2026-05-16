@@ -9,23 +9,30 @@ async function test() {
         return;
     }
     const ctx = await initWhisper({ filePath: modelPath });
-    console.log("Init success. Testing transcription...");
     
-    // Create 1 second of silence (16000 samples, 16-bit PCM = 32000 bytes)
-    const pcm = new Int16Array(16000);
+    // Generate "Hello" spoken? No, let's just generate a 440Hz sine wave. It should just say "Ahhhh" or something.
+    // Let's actually use an existing wav file if there is one. Is there a public/test.wav?
     
-    // Also try Float32Array
-    const f32 = new Float32Array(16000);
-
+    // Let's create an Int16Array
+    const sampleRate = 16000;
+    const duration = 2; // 2 seconds
+    const pcm = new Int16Array(sampleRate * duration);
+    const f32 = new Float32Array(sampleRate * duration);
+    for(let i=0; i<pcm.length; i++) {
+        const val = Math.sin(2 * Math.PI * 440 * i / sampleRate);
+        pcm[i] = val < 0 ? val * 0x8000 : val * 0x7FFF;
+        f32[i] = val;
+    }
+    
     try {
-        console.log("Transcribing Float32Array buffer...");
-        const res1 = await ctx.transcribeData(f32.buffer, { language: 'en' }).promise;
+        console.log("Transcribing Float32Array...");
+        const res1 = await ctx.transcribeData(f32, { language: 'en' }).promise;
         console.log("Float32 result:", res1.result);
     } catch(e) { console.error("Float32 failed", e); }
     
     try {
-        console.log("Transcribing Int16Array buffer...");
-        const res2 = await ctx.transcribeData(pcm.buffer, { language: 'en' }).promise;
+        console.log("Transcribing Int16Array...");
+        const res2 = await ctx.transcribeData(pcm, { language: 'en' }).promise;
         console.log("Int16 result:", res2.result);
     } catch(e) { console.error("Int16 failed", e); }
 }

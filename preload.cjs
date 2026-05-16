@@ -10,5 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     transcribeAudio: (buffer) => {
         return ipcRenderer.invoke('transcribe-audio', buffer);
+    },
+    onVoiceEvent: (callback) => {
+        ipcRenderer.on('voice-event', (event, data) => callback(data));
     }
 });
