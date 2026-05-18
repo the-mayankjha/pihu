@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
+const os = require('os');
 
 let mainWindow;
 let pythonProcess;
@@ -63,6 +64,74 @@ function createWindow() {
   ipcMain.on('quit-app', () => {
     app.quit();
   });
+
+  // Start real-time Apple IO system stats monitoring
+  let startCPU = getCPUUsage();
+  let statsInterval = setInterval(() => {
+    if (!mainWindow || mainWindow.webContents.isDestroyed()) return;
+
+    // Calculate actual CPU Usage %
+    const endCPU = getCPUUsage();
+    const idleDiff = endCPU.idle - startCPU.idle;
+    const totalDiff = endCPU.total - startCPU.total;
+    const cpuPercent = totalDiff > 0 ? Math.max(0, Math.min(100, 100 - Math.floor((100 * idleDiff) / totalDiff))) : 0;
+    startCPU = endCPU;
+
+    // Calculate actual Memory Usage (GB and %)
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const memoryPercent = Math.max(0, Math.min(100, Math.floor((usedMem / totalMem) * 100)));
+    const totalGB = (totalMem / (1024 * 1024 * 1024)).toFixed(1);
+    const usedGB = (usedMem / (1024 * 1024 * 1024)).toFixed(1);
+
+    // Grab real Battery % & Charging state directly from Apple IO (pmset)
+    exec('pmset -g batt', (err, stdout) => {
+      let batteryPercent = 90;
+      let isCharging = false;
+      
+      if (!err && stdout) {
+        const percentMatch = stdout.match(/(\d+)%/);
+        if (percentMatch) {
+          batteryPercent = parseInt(percentMatch[1], 10);
+        }
+        isCharging = stdout.includes('charging') || stdout.includes('AC Power') || stdout.includes('charged');
+      }
+
+      mainWindow.webContents.send('system-stats', {
+        cpu: cpuPercent,
+        memory: {
+          percent: memoryPercent,
+          usedGB,
+          totalGB
+        },
+        battery: {
+          percent: batteryPercent,
+          isCharging
+        }
+      });
+    });
+  }, 2000);
+
+  mainWindow.on('closed', () => {
+    if (statsInterval) clearInterval(statsInterval);
+    mainWindow = null;
+  });
+}
+
+// Helpers for CPU calculations
+function getCPUUsage() {
+  const cpus = os.cpus();
+  let user = 0, nice = 0, sys = 0, idle = 0, irq = 0;
+  for (const cpu of cpus) {
+    user += cpu.times.user;
+    nice += cpu.times.nice;
+    sys += cpu.times.sys;
+    idle += cpu.times.idle;
+    irq += cpu.times.irq;
+  }
+  const total = user + nice + sys + idle + irq;
+  return { idle, total };
 }
 
 function startPythonEngine() {

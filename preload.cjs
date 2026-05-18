@@ -17,5 +17,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => {
             ipcRenderer.removeListener('voice-event', subscription);
         };
+    },
+    onSystemStats: (callback) => {
+        const subscription = (event, data) => callback(data);
+        ipcRenderer.on('system-stats', subscription);
+        return () => {
+            ipcRenderer.removeListener('system-stats', subscription);
+        };
     }
 });
