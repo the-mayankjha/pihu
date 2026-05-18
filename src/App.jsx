@@ -5,7 +5,12 @@ import MemoryOverlay from './components/ui/MemoryOverlay';
 import WorkflowOverlay from './components/ui/WorkflowOverlay';
 import Waveform from './components/ui/Waveform';
 import Transcription from './components/ui/Transcription';
-import './style.css'; // We'll move the CSS here or import it directly
+import SidebarLeft from './components/ui/SidebarLeft';
+import SidebarRight from './components/ui/SidebarRight';
+import TopStatusBar from './components/ui/TopStatusBar';
+import BottomActionPanel from './components/ui/BottomActionPanel';
+import './style.css';
+import './dashboard.css';
 
 const App = () => {
   const [isActive, setIsActive] = useState(false);
@@ -14,6 +19,7 @@ const App = () => {
   const [transcriptionText, setTranscriptionText] = useState('');
   const [showTranscription, setShowTranscription] = useState(false);
   const [systemStatus, setSystemStatus] = useState('Initialized P.I.H.U v1.2');
+  const [showExplorer, setShowExplorer] = useState(false);
 
   const addTerminalLine = useCallback((text, color = 'cyan') => {
     setLogs(prev => [...prev, { text, color }]);
@@ -77,6 +83,9 @@ const App = () => {
           deactivatePIHU();
         }
       }
+      if (e.altKey && e.key.toLowerCase() === 'e') {
+        setShowExplorer(prev => !prev);
+      }
       if (e.key === 'Escape' && isActive) {
         deactivatePIHU();
       }
@@ -132,33 +141,42 @@ const App = () => {
     <>
       <div className={blurClass} id="blurOverlay"></div>
 
-      <main className={`ui-layer ${isActive ? 'active' : ''}`}>
+      <main className={`ui-layer dashboard-layout ${isActive ? 'active' : ''}`}>
         
         <div className={`screen-frame ${isActive ? 'active' : ''} ${voiceState !== 'idle' ? voiceState : ''}`} id="screenFrame"></div>
+        
+        {showExplorer && <SidebarLeft isVisible={isActive} />}
+        
+        <div className="center-workspace">
+          <TopStatusBar voiceState={voiceState} isVisible={isActive} />
 
-        <WorkflowOverlay isVisible={voiceState === 'executing'} />
-        <MemoryOverlay isVisible={voiceState === 'executing'} />
-        <Terminal logs={logs} isVisible={voiceState === 'executing'} />
+          <WorkflowOverlay isVisible={voiceState === 'executing'} />
+          <MemoryOverlay isVisible={voiceState === 'executing'} />
+          <Terminal logs={logs} isVisible={voiceState === 'executing'} />
 
-        <div className="transcription-container">
-            <Waveform isVisible={isActive && voiceState === 'listening'} />
-            <Transcription text={transcriptionText} isVisible={showTranscription} />
+          <div className="transcription-container">
+              <Transcription text={transcriptionText} isVisible={showTranscription} />
+          </div>
+
+          <Orb voiceState={voiceState} />
+
+          <BottomActionPanel voiceState={voiceState} isVisible={isActive} />
         </div>
 
-        <Orb voiceState={voiceState} />
+        <SidebarRight isVisible={isActive} />
       </main>
 
       {!isActive && (
-        <div className="hint-text">Press <strong>Option + P</strong> to activate PIHU</div>
+        <>
+          <div className="hint-text">Press <strong>Option + P</strong> to activate PIHU</div>
+          <div className="right-label">
+            <strong>P.I.H.U</strong> - {systemStatus}
+          </div>
+          <div className="bottom-center-label">
+            Developed by <a href="https://github.com/the-mayankjha" target="_blank" rel="noreferrer">Mayank Jha</a>
+          </div>
+        </>
       )}
-
-      <div className="right-label">
-        <strong>P.I.H.U</strong> - {systemStatus}
-      </div>
-
-      <div className="bottom-center-label">
-        Developed by <a href="https://github.com/the-mayankjha" target="_blank" rel="noreferrer">Mayank Jha</a>
-      </div>
     </>
   );
 };
