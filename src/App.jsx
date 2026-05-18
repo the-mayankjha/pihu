@@ -4,11 +4,12 @@ import Terminal from './components/ui/Terminal';
 import MemoryOverlay from './components/ui/MemoryOverlay';
 import WorkflowOverlay from './components/ui/WorkflowOverlay';
 import Waveform from './components/ui/Waveform';
-import Transcription from './components/ui/Transcription';
 import SidebarLeft from './components/ui/SidebarLeft';
 import SidebarRight from './components/ui/SidebarRight';
-import TopStatusBar from './components/ui/TopStatusBar';
-import BottomActionPanel from './components/ui/BottomActionPanel';
+import SettingsPanel from './components/ui/SettingsPanel';
+import FullOrbLayout from './components/ui/layouts/FullOrbLayout';
+import CompactBarLayout from './components/ui/layouts/CompactBarLayout';
+import MiniOrbLayout from './components/ui/layouts/MiniOrbLayout';
 import './style.css';
 import './dashboard.css';
 
@@ -20,6 +21,11 @@ const App = () => {
   const [showTranscription, setShowTranscription] = useState(false);
   const [systemStatus, setSystemStatus] = useState('Initialized P.I.H.U v1.2');
   const [showExplorer, setShowExplorer] = useState(false);
+  
+  // Customization States
+  const [theme, setTheme] = useState('nebula');
+  const [displayMode, setDisplayMode] = useState('full-orb');
+  const [showSettings, setShowSettings] = useState(false);
 
   const addTerminalLine = useCallback((text, color = 'cyan') => {
     setLogs(prev => [...prev, { text, color }]);
@@ -147,24 +153,41 @@ const App = () => {
         
         {showExplorer && <SidebarLeft isVisible={isActive} />}
         
-        <div className="center-workspace">
-          <TopStatusBar voiceState={voiceState} isVisible={isActive} />
+        {displayMode === 'full-orb' && (
+          <FullOrbLayout 
+            voiceState={voiceState} isActive={isActive} logs={logs} 
+            transcriptionText={transcriptionText} showTranscription={showTranscription} 
+            theme={theme} 
+          />
+        )}
+        
+        {displayMode === 'compact-bar' && (
+          <CompactBarLayout 
+            voiceState={voiceState} isActive={isActive} logs={logs} 
+            transcriptionText={transcriptionText} showTranscription={showTranscription} 
+            theme={theme} 
+          />
+        )}
 
-          <WorkflowOverlay isVisible={voiceState === 'executing'} />
-          <MemoryOverlay isVisible={voiceState === 'executing'} />
-          <Terminal logs={logs} isVisible={voiceState === 'executing'} />
+        {displayMode === 'mini-orb' && (
+          <MiniOrbLayout 
+            voiceState={voiceState} isActive={isActive} logs={logs} 
+            transcriptionText={transcriptionText} showTranscription={showTranscription} 
+            theme={theme} 
+          />
+        )}
 
-          <div className="transcription-container">
-              <Transcription text={transcriptionText} isVisible={showTranscription} />
-          </div>
-
-          <Orb voiceState={voiceState} />
-
-          <BottomActionPanel voiceState={voiceState} isVisible={isActive} />
-        </div>
-
-        <SidebarRight isVisible={isActive} />
+        <SidebarRight isVisible={isActive} onOpenSettings={() => setShowSettings(true)} />
       </main>
+
+      <SettingsPanel 
+        isVisible={showSettings} 
+        onClose={() => setShowSettings(false)}
+        theme={theme}
+        setTheme={setTheme}
+        displayMode={displayMode}
+        setDisplayMode={setDisplayMode}
+      />
 
       {!isActive && (
         <>

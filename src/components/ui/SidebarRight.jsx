@@ -1,6 +1,6 @@
 import React from 'react';
 
-const SidebarRight = ({ isVisible }) => {
+const SidebarRight = ({ isVisible, onOpenSettings }) => {
   if (!isVisible) return null;
 
   return (
@@ -13,7 +13,7 @@ const SidebarRight = ({ isVisible }) => {
         </div>
         <div className="actions">
           <span className="icon">☀️</span>
-          <span className="icon">⚙️</span>
+          <span className="icon" onClick={onOpenSettings} style={{cursor: 'pointer'}}>⚙️</span>
         </div>
       </div>
 

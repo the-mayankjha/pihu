@@ -149,7 +149,7 @@ void main() {
 
 // --- React Component ---
 
-const Orb = ({ voiceState }) => {
+const Orb = ({ voiceState, theme }) => {
   const mountRef = useRef(null);
   const stateRef = useRef(voiceState);
 
@@ -213,10 +213,19 @@ const Orb = ({ voiceState }) => {
         let speedMultiplier = 1.0;
         let targetIntensity = 0.8;
 
+        // Theme colors mapping
+        const themeColors = {
+            nebula: { top: 0x0055ff, bottom: 0x7700ff }, // Blue / Purple
+            ocean: { top: 0x00ffcc, bottom: 0x0055ff }, // Teal / Deep Blue
+            sunset: { top: 0xff4400, bottom: 0xaa0055 }, // Orange / Dark Pink
+            matrix: { top: 0x00ff00, bottom: 0x005500 }, // Bright Green / Dark Green
+        };
+        const currentThemeColors = themeColors[theme] || themeColors.nebula;
+
         if (currentState === 'waking') {
             speedMultiplier = 1.5;
             targetIntensity = 1.0;
-            uniforms.uColorTop.value.lerp(new THREE.Color(0x00aaff), 0.02); // Brighter blue
+            uniforms.uColorTop.value.lerp(new THREE.Color(0x00aaff), 0.02); // Brighter generic blue
             uniforms.uColorBottom.value.lerp(new THREE.Color(0xcc00ff), 0.02);
         } else if (currentState === 'listening') {
             speedMultiplier = 2.0;
@@ -230,11 +239,11 @@ const Orb = ({ voiceState }) => {
             uniforms.uColorTop.value.lerp(new THREE.Color(0x00ffcc), 0.05); // Mint Green
             uniforms.uColorBottom.value.lerp(new THREE.Color(0x0088ff), 0.05); // Deep Blue
         } else {
-            // Idle
+            // Idle - use Theme Colors
             speedMultiplier = 0.4; // Very slow, calm flow
             targetIntensity = 0.8;
-            uniforms.uColorTop.value.lerp(new THREE.Color(0x0055ff), 0.02); // Deep blue
-            uniforms.uColorBottom.value.lerp(new THREE.Color(0x7700ff), 0.02); // Deep purple
+            uniforms.uColorTop.value.lerp(new THREE.Color(currentThemeColors.top), 0.02);
+            uniforms.uColorBottom.value.lerp(new THREE.Color(currentThemeColors.bottom), 0.02);
         }
 
         // Smoothly interpolate uniform values
