@@ -13,6 +13,7 @@ const App = () => {
   const [logs, setLogs] = useState([]);
   const [transcriptionText, setTranscriptionText] = useState('');
   const [showTranscription, setShowTranscription] = useState(false);
+  const [systemStatus, setSystemStatus] = useState('Initialized P.I.H.U v1.2');
 
   const addTerminalLine = useCallback((text, color = 'cyan') => {
     setLogs(prev => [...prev, { text, color }]);
@@ -43,6 +44,7 @@ const App = () => {
     if (isActive) return;
     setIsActive(true);
     setVoiceState('waking');
+    setSystemStatus('Connecting to servers...');
     if (window.electronAPI) {
       window.electronAPI.setIgnoreMouseEvents(false);
     }
@@ -50,6 +52,7 @@ const App = () => {
     // Auto transition to listening after waking
     setTimeout(() => {
       setVoiceState(prev => prev === 'waking' ? 'listening' : prev);
+      setSystemStatus('Initialized P.I.H.U v1.2');
     }, 1500);
   }, [isActive]);
 
@@ -57,6 +60,7 @@ const App = () => {
     if (!isActive) return;
     setIsActive(false);
     setVoiceState('idle');
+    setSystemStatus('Initialized P.I.H.U v1.2');
     setLogs([]); // Clear logs on sleep
     if (window.electronAPI) {
       window.electronAPI.setIgnoreMouseEvents(true, { forward: true });
@@ -147,6 +151,14 @@ const App = () => {
       {!isActive && (
         <div className="hint-text">Press <strong>Option + P</strong> to activate PIHU</div>
       )}
+
+      <div className="right-label">
+        <strong>P.I.H.U</strong> - {systemStatus}
+      </div>
+
+      <div className="bottom-center-label">
+        Developed by <a href="https://github.com/the-mayankjha" target="_blank" rel="noreferrer">Mayank Jha</a>
+      </div>
     </>
   );
 };

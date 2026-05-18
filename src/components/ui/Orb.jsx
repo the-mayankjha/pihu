@@ -272,9 +272,8 @@ const Orb = ({ voiceState }) => {
         {/* 3D Plasma Canvas */}
         <div ref={mountRef} style={{ position: 'absolute', top: '-25px', left: '-25px', width: '400px', height: '400px', pointerEvents: 'none' }}></div>
         
-        {/* Central PIHU Text */}
+        {/* Central PIHU Text - Removed as requested */}
         <div className="orb-core" id="orbCore">
-            <span className="orb-text">PIHU</span>
         </div>
     </div>
   );
