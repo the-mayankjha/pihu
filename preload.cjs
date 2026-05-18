@@ -12,6 +12,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return ipcRenderer.invoke('transcribe-audio', buffer);
     },
     onVoiceEvent: (callback) => {
-        ipcRenderer.on('voice-event', (event, data) => callback(data));
+        const subscription = (event, data) => callback(data);
+        ipcRenderer.on('voice-event', subscription);
+        return () => {
+            ipcRenderer.removeListener('voice-event', subscription);
+        };
     }
 });

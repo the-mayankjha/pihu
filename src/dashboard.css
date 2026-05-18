@@ -363,96 +363,239 @@
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  padding: 12px 24px;
-  border-radius: 20px;
+  padding: 14px 28px;
+  border-radius: 24px;
   gap: 24px;
   z-index: 60;
-  width: 700px;
-  border: 1px solid rgba(0, 229, 255, 0.2);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 229, 255, 0.02);
-  background: linear-gradient(180deg, rgba(15, 20, 30, 0.8), rgba(10, 15, 25, 0.9));
+  width: 720px;
+  overflow: hidden;
+  
+  /* Modern CSS Glass gradient border trick */
+  border: 1px solid transparent;
+  background: linear-gradient(180deg, rgba(8, 12, 28, 0.8), rgba(6, 9, 20, 0.9)) padding-box,
+              linear-gradient(135deg, rgba(0, 229, 255, 0.45) 0%, rgba(168, 0, 255, 0.45) 100%) border-box;
+  
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 
+              0 0 40px rgba(0, 229, 255, 0.08), 
+              inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
 }
-.mic-ring-outer {
-  width: 56px;
-  height: 56px;
+
+/* Background Lens Flares for Volumetric Depth */
+.panel-glow-flare {
+  position: absolute;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 229, 255, 0.3);
+  filter: blur(55px);
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.18;
+  mix-blend-mode: screen;
+}
+.panel-glow-flare.flare-left {
+  top: -50px;
+  left: 10px;
+  background: radial-gradient(circle, #00e5ff 0%, transparent 70%);
+}
+.panel-glow-flare.flare-right {
+  bottom: -50px;
+  right: 20px;
+  background: radial-gradient(circle, #a800ff 0%, transparent 70%);
+}
+
+/* Upgraded Concentric Mic Rings & Instrumentation Ticks */
+.mic-outer-container {
+  position: relative;
+  width: 68px;
+  height: 68px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+  flex-shrink: 0; /* Bulletproof fix: prevents flex layout from squishing the width into an ellipse! */
+}
+
+.mic-radar-rings {
+  position: absolute;
+  width: 68px;
+  height: 68px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* Bulletproof fix: absolute centered sizing guarantees perfect circles! */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.mic-radar-rings .ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  box-sizing: border-box;
+}
+
+.mic-radar-rings .ring-outer {
+  width: 66px;
+  height: 66px;
+  border: 1px solid rgba(0, 229, 255, 0.22);
   position: relative;
 }
-.mic-ring-outer::before {
-  content: '';
-  position: absolute;
-  top: -4px; left: -4px; right: -4px; bottom: -4px;
-  border-radius: 50%;
-  border: 1px solid rgba(170, 0, 255, 0.2);
+
+.mic-radar-rings .ring-inner {
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(0, 229, 255, 0.08);
 }
-.mic-ring-inner {
-  width: 44px;
-  height: 44px;
+
+/* Cardinal Beads (Dots) sitting directly on the outer ring */
+.mic-radar-rings .bead {
+  position: absolute;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 229, 255, 0.15), rgba(170, 0, 255, 0.05));
-  border: 1px solid var(--color-cyan);
+  background: #00f2fe;
+  box-shadow: 0 0 8px #00f2fe, 0 0 15px rgba(0, 242, 254, 0.6);
+}
+.mic-radar-rings .bead.b-top {
+  top: -2.5px; left: 50%; transform: translateX(-50%);
+}
+.mic-radar-rings .bead.b-bottom {
+  bottom: -2.5px; left: 50%; transform: translateX(-50%);
+  background: #d946ef;
+  box-shadow: 0 0 8px #d946ef, 0 0 15px rgba(217, 70, 239, 0.6);
+}
+.mic-radar-rings .bead.b-left {
+  left: -2.5px; top: 50%; transform: translateY(-50%);
+}
+.mic-radar-rings .bead.b-right {
+  right: -2.5px; top: 50%; transform: translateY(-50%);
+  background: #d946ef;
+  box-shadow: 0 0 8px #d946ef, 0 0 15px rgba(217, 70, 239, 0.6);
+}
+
+/* Gradient-Bordered Microphone Button from Image 3 */
+.mic-button-core {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  background: linear-gradient(#050714, #050714) padding-box,
+              linear-gradient(135deg, #00f2fe 0%, #d946ef 100%) border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 20px rgba(0, 229, 255, 0.4), inset 0 0 10px rgba(170, 0, 255, 0.4);
+  box-shadow: 0 0 25px rgba(0, 242, 254, 0.35),
+              0 0 45px rgba(217, 70, 239, 0.2);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.mic-button-core:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 35px rgba(0, 242, 254, 0.55),
+              0 0 60px rgba(217, 70, 239, 0.35);
+}
+
+/* Glass sphere inside with Top-focused radial spot highlight matching Image 3 */
+.mic-glass-sphere {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at 50% 15%, rgba(0, 242, 254, 0.55) 0%, rgba(8, 12, 28, 0.95) 75%);
+  pointer-events: none;
+  z-index: 1;
+}
+.mic-glass-sphere::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 50%);
+  border-radius: 50%;
+}
+
 .mic-svg {
-  width: 20px;
-  height: 20px;
-  color: #fff;
+  width: 16px;
+  height: 16px;
+  color: #ffffff;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 8px rgba(0, 242, 254, 0.5));
+  z-index: 2;
 }
+
+.mic-svg * {
+  fill: none !important; /* Forces the inside of the SVG rect and paths to be completely transparent */
+}
+
 .action-status {
   display: flex;
   flex-direction: column;
+  justify-content: center;
 }
 .action-status .primary-text {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 500;
+  color: #ffffff;
+  letter-spacing: 0.4px;
 }
 .action-status .secondary-text {
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+  letter-spacing: 0.2px;
 }
+
 .waveform-wrapper {
   flex-grow: 1;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 0 16px;
 }
+
 .wake-word-info {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  justify-content: center;
+  min-width: 90px;
 }
 .wake-word-info .label {
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.3px;
 }
 .wake-word-info .value {
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 500;
+  color: #ffffff;
+  margin-top: 1px;
 }
+
 .signal-bars {
   display: flex;
-  gap: 3px;
+  gap: 3.5px;
   align-items: flex-end;
-  height: 12px;
-  margin-top: 4px;
+  height: 16px;
+  margin-top: 6px;
 }
 .signal-bars .bar {
   width: 3px;
-  background: var(--color-cyan);
-  border-radius: 1px;
+  border-radius: 1.5px;
+  background: linear-gradient(180deg, #00f2fe 0%, #0077ff 100%);
+  opacity: 0.8;
+  box-shadow: 0 0 6px rgba(0, 242, 254, 0.5);
+  transition: all 0.3s ease;
 }
-.signal-bars .bar.low { height: 4px; }
-.signal-bars .bar.medium { height: 8px; }
-.signal-bars .bar.high { height: 12px; }
-.signal-bars .bar.max { height: 16px; background: rgba(255,255,255,0.2); }
+.signal-bars .bar.b1 { height: 4px; opacity: 0.45; }
+.signal-bars .bar.b2 { height: 6px; opacity: 0.6; }
+.signal-bars .bar.b3 { height: 9px; opacity: 0.75; }
+.signal-bars .bar.b4 { height: 12px; opacity: 0.9; }
+.signal-bars .bar.b5 { 
+  height: 16px; 
+  opacity: 1.0; 
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.8);
+}
 
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(20px); }

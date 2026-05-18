@@ -79,7 +79,8 @@ bg_rms_values = []
 for _ in range(int(1000 / FRAME_DURATION_MS)):
     frame = stream.read(CHUNK, exception_on_overflow=False)
     bg_rms_values.append(calculate_rms(frame))
-bg_rms = np.mean(bg_rms_values)
+bg_rms = float(np.mean(bg_rms_values))
+emit({"event": "calibration_complete", "rms": bg_rms})
 emit({"event": "log", "message": f"Calibration complete. Background RMS: {bg_rms:.2f}"})
 
 try:

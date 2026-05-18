@@ -19,7 +19,7 @@ const App = () => {
   const [logs, setLogs] = useState([]);
   const [transcriptionText, setTranscriptionText] = useState('');
   const [showTranscription, setShowTranscription] = useState(false);
-  const [systemStatus, setSystemStatus] = useState('Initialized P.I.H.U v1.2');
+  const [systemStatus, setSystemStatus] = useState('System Calibrating...');
   const [showExplorer, setShowExplorer] = useState(false);
   
   // Customization States
@@ -103,8 +103,10 @@ const App = () => {
   // Handle Voice IPC Events
   useEffect(() => {
     if (window.electronAPI && window.electronAPI.onVoiceEvent) {
-      window.electronAPI.onVoiceEvent((event) => {
-        if (event.event === 'waking') {
+      const unsubscribe = window.electronAPI.onVoiceEvent((event) => {
+        if (event.event === 'calibration_complete') {
+          setSystemStatus('Initialized P.I.H.U v1.2');
+        } else if (event.event === 'waking') {
           console.log("🔊 Wake word detected:", event.text);
           activatePIHU();
           
@@ -137,6 +139,10 @@ const App = () => {
           console.log("Background Whisper heard:", event.text);
         }
       });
+
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
     }
   }, [isActive, voiceState, activatePIHU, handleCommand, addTerminalLine]);
 
@@ -196,7 +202,7 @@ const App = () => {
             <strong>P.I.H.U</strong> - {systemStatus}
           </div>
           <div className="bottom-center-label">
-            Developed by <a href="https://github.com/the-mayankjha" target="_blank" rel="noreferrer">Mayank Jha</a>
+            Developed by <a href="https://github.com/the-mayankjha" target="_blank" rel="noreferrer" style={{ color: '#ffffff', textDecoration: 'none' }}>Mayank Jha</a>
           </div>
         </>
       )}
