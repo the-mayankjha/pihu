@@ -149,8 +149,12 @@ function startPythonEngine() {
                 const event = JSON.parse(line);
                 if (event.event === 'log') {
                     console.log(`[Python] ${event.message}`);
-                } else if (mainWindow) {
-                    mainWindow.webContents.send('voice-event', event);
+                } else if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+                    try {
+                        mainWindow.webContents.send('voice-event', event);
+                    } catch (sendErr) {
+                        console.error('[IPC ERROR] Failed to send voice-event to renderer:', sendErr);
+                    }
                 }
             } catch (e) {
                 console.log(`[Python RAW] ${line}`);

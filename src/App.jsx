@@ -328,6 +328,11 @@ const App = () => {
           />
         )}
 
+        {/* Persistent, high-performance WebGL Orb (avoids unmounting context on layout swap) */}
+        <div className={`persistent-orb-container display-${displayMode}`}>
+          <Orb voiceState={voiceState} theme={theme} />
+        </div>
+
         <SidebarRight isVisible={isActive} />
       </main>
 

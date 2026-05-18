@@ -1713,3 +1713,41 @@
   height: 100%;
   display: block;
 }
+
+/* Persistent root-level WebGL Orb container positioning rules */
+.persistent-orb-container {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  width: 420px;
+  height: 420px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 5;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.persistent-orb-container .orb-scene {
+  position: relative !important;
+  top: 0 !important;
+  left: 0 !important;
+  transform: none !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.persistent-orb-container.display-full-orb {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.persistent-orb-container.display-mini-orb {
+  opacity: 1;
+  transform: translate(-50%, -10%) scale(0.35);
+}
+
+.persistent-orb-container.display-compact-bar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+}

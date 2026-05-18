@@ -54,19 +54,24 @@ void main() {
   float coord2 = (vPosition.x - vPosition.y) * 5.5 + warp2;
   float lines2 = smoothstep(0.97, 1.0, abs(sin(coord2))) * 0.4;
   
-  // 2. Rim Glow (Fresnel)
-  // Image 2 has a very smooth, soft, and wide glow around the outer edge
-  float rim = pow(1.0 - fresnel, 2.5) * 1.3;
+  // 2. Rim Glow & Crisp Glowing Border (Image 2)
+  // Wide ambient glow around the edge (colored cyan/violet)
+  float rim = pow(1.0 - fresnel, 3.2) * 1.5;
+  
+  // Ultra-crisp, extremely thin white glass outline ring right at the grazing edge
+  float edgeRing = smoothstep(0.95, 0.97, 1.0 - fresnel) * (1.0 - smoothstep(0.985, 0.995, 1.0 - fresnel));
   
   // Fade the lines inside the core so the text stays completely readable and clean
   float lineMask = pow(1.0 - fresnel, 1.5);
+  
+  // The general glow intensity of lines + ambient rim shades
   float finalGlow = ((lines1 + lines2) * lineMask * 0.95 + rim) * uIntensity;
 
   // ==========================================
   // MIX & COLOR
   // ==========================================
   // Beautiful deep colors: violet on left, cyan on right
-  vec3 colorLeft = vec3(0.25, 0.05, 0.85);  // Deep rich violet
+  vec3 colorLeft = vec3(0.22, 0.05, 0.85);  // Deep rich violet
   vec3 colorRight = vec3(0.0, 0.5, 0.95);   // Luminous cyan/blue
   
   float mixFactor = clamp((vPosition.x + 0.8) * 0.6, 0.0, 1.0);
@@ -75,10 +80,15 @@ void main() {
   // Deep navy, almost black center for realistic volume
   vec3 darkCore = vec3(0.004, 0.004, 0.015);
   
+  // Core color mixing (interior plasma + ambient rim shades)
   vec3 finalColor = mix(darkCore, baseColor, clamp(finalGlow, 0.0, 1.0));
   
-  // Soft transparency centered around the core
-  float alpha = clamp(finalGlow + 0.55, 0.0, 1.0);
+  // Add a brilliant, pure glowing white ring exactly at the edge, enhanced by intensity
+  vec3 whiteRingColor = vec3(0.95, 0.98, 1.0) * edgeRing * 1.8 * uIntensity;
+  finalColor += whiteRingColor;
+  
+  // Soft transparency centered around the core + full opacity for the crisp white ring
+  float alpha = clamp(finalGlow + 0.55 + edgeRing, 0.0, 1.0);
   
   gl_FragColor = vec4(finalColor, alpha);
 }

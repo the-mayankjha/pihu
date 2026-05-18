@@ -46,7 +46,7 @@ const SettingsPanel = ({ isVisible, onClose, theme, setTheme, displayMode, setDi
     <div 
       id="blurOverlay"
       className="settings-overlay" 
-      style={{ backdropFilter: `blur(${blurStrength}px)`, webkitBackdropFilter: `blur(${blurStrength}px)` }}
+      style={{ backdropFilter: `blur(${blurStrength}px)`, WebkitBackdropFilter: `blur(${blurStrength}px)` }}
       onClick={(e) => e.target.className === 'settings-overlay' && onClose()}
     >
       <div className="settings-panel glass-panel two-pane-layout">

@@ -17,9 +17,7 @@ const MiniOrbLayout = ({ voiceState, isActive, logs, transcriptionText, showTran
           <Transcription text={transcriptionText} isVisible={showTranscription} />
       </div>
 
-      <div className="mini-orb-wrapper">
-        <Orb voiceState={voiceState} theme={theme} />
-      </div>
+
 
       <BottomActionPanel voiceState={voiceState} isVisible={isActive} />
     </div>

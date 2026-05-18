@@ -19,7 +19,7 @@ const FullOrbLayout = ({ voiceState, isActive, logs, transcriptionText, showTran
           <Transcription text={transcriptionText} isVisible={showTranscription} />
       </div>
 
-      <Orb voiceState={voiceState} theme={theme} />
+
 
       <div className="bottom-layout-stack">
         <BottomActionPanel voiceState={voiceState} isVisible={isActive} />
