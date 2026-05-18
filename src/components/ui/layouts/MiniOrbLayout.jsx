@@ -3,7 +3,7 @@ import WorkflowOverlay from '../WorkflowOverlay';
 import MemoryOverlay from '../MemoryOverlay';
 import Terminal from '../Terminal';
 import Transcription from '../Transcription';
-import Orb from '../Orb';
+import Orb from '../orb/Orb';
 import BottomActionPanel from '../BottomActionPanel';
 import TopStatusBar from '../TopStatusBar';
 

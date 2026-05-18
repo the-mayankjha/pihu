@@ -4,8 +4,9 @@ import WorkflowOverlay from '../WorkflowOverlay';
 import MemoryOverlay from '../MemoryOverlay';
 import Terminal from '../Terminal';
 import Transcription from '../Transcription';
-import Orb from '../Orb';
+import Orb from '../orb/Orb';
 import BottomActionPanel from '../BottomActionPanel';
+import SuggestedActions from '../SuggestedActions';
 
 const FullOrbLayout = ({ voiceState, isActive, logs, transcriptionText, showTranscription, theme }) => {
   return (
@@ -22,7 +23,10 @@ const FullOrbLayout = ({ voiceState, isActive, logs, transcriptionText, showTran
 
       <Orb voiceState={voiceState} theme={theme} />
 
-      <BottomActionPanel voiceState={voiceState} isVisible={isActive} />
+      <div className="bottom-layout-stack">
+        <BottomActionPanel voiceState={voiceState} isVisible={isActive} />
+        <SuggestedActions isVisible={isActive && voiceState === 'idle'} />
+      </div>
     </div>
   );
 };

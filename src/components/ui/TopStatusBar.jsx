@@ -1,23 +1,29 @@
 import React from 'react';
 
 const TopStatusBar = ({ voiceState, isVisible }) => {
-  if (!isVisible) return null;
+  if (!isVisible || voiceState === 'idle') return null;
 
-  let text = 'PIHU is idle...';
-  if (voiceState === 'waking') text = 'PIHU is connecting to servers...';
-  if (voiceState === 'listening') text = 'PIHU is active and listening...';
-  if (voiceState === 'executing') text = 'PIHU is processing request...';
+  let text = "PIHU is active and listening...";
+  if (voiceState === 'waking') text = "Connecting to PIHU...";
+  if (voiceState === 'executing') text = "Processing command...";
 
   return (
-    <div className="top-status-bar glass-panel">
-      <div className="status-text">{text}</div>
-      <div className="mini-waveform">
-        <span className="wave"></span>
-        <span className="wave"></span>
-        <span className="wave"></span>
-        <span className="wave"></span>
-        <span className="wave"></span>
-        <span className="wave"></span>
+    <div className="top-status-pill glass-panel">
+      <div className="status-dots left">
+        <span className="dot d1"></span><span className="dot d2"></span><span className="dot d3"></span><span className="dot d4"></span>
+      </div>
+      
+      <div className="status-center">
+        <div className="status-text">{text}</div>
+        <div className="pill-waveform">
+          <div className="wave"></div><div className="wave"></div><div className="wave"></div>
+          <div className="wave"></div><div className="wave"></div><div className="wave"></div>
+          <div className="wave"></div><div className="wave"></div><div className="wave"></div>
+        </div>
+      </div>
+      
+      <div className="status-dots right">
+        <span className="dot d4"></span><span className="dot d3"></span><span className="dot d2"></span><span className="dot d1"></span>
       </div>
     </div>
   );

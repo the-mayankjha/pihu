@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Orb from './components/ui/Orb';
+import Orb from './components/ui/orb/Orb';
 import Terminal from './components/ui/Terminal';
 import MemoryOverlay from './components/ui/MemoryOverlay';
 import WorkflowOverlay from './components/ui/WorkflowOverlay';

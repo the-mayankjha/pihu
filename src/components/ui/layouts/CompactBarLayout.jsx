@@ -4,6 +4,7 @@ import MemoryOverlay from '../MemoryOverlay';
 import Terminal from '../Terminal';
 import Transcription from '../Transcription';
 import BottomActionPanel from '../BottomActionPanel';
+import SuggestedActions from '../SuggestedActions';
 
 const CompactBarLayout = ({ voiceState, isActive, logs, transcriptionText, showTranscription, theme }) => {
   return (
@@ -24,6 +25,7 @@ const CompactBarLayout = ({ voiceState, isActive, logs, transcriptionText, showT
 
       <div className="compact-action-wrapper">
          <BottomActionPanel voiceState={voiceState} isVisible={isActive} />
+         <SuggestedActions isVisible={isActive && voiceState === 'idle'} />
       </div>
     </div>
   );
