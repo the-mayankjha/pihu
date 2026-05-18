@@ -293,15 +293,9 @@ body {
     width: 140px;
     height: 140px;
     border-radius: 50%;
-    background: radial-gradient(circle at 50% 50%, rgba(5, 10, 20, 0.95) 0%, rgba(5, 15, 30, 0.8) 70%, transparent 100%);
-    box-shadow: 
-        0 0 30px rgba(0, 150, 255, 0.4),
-        inset 0 0 25px rgba(0, 200, 255, 0.6);
-    border: 3px solid rgba(0, 200, 255, 0.9);
     position: relative;
     z-index: 5;
     transition: all 0.5s var(--transition-smooth);
-    animation: breatheIdle 6s infinite ease-in-out;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -319,23 +313,12 @@ body {
 
 /* Waking */
 .orb-container.waking .orb-core {
-    background: radial-gradient(circle at 50% 50%, rgba(5, 20, 40, 0.95) 0%, rgba(5, 30, 60, 0.8) 70%, transparent 100%);
-    box-shadow: 
-        0 0 50px rgba(0, 200, 255, 0.9),
-        inset 0 0 40px rgba(255,255,255,0.9);
     transform: scale(1.1);
-    border: 3px solid #00ffff;
 }
 
 /* Listening */
 .orb-container.listening .orb-core {
-    background: radial-gradient(circle at 50% 50%, rgba(5, 20, 40, 0.95) 0%, rgba(5, 30, 60, 0.8) 70%, transparent 100%);
-    box-shadow: 
-        0 0 40px rgba(0, 229, 255, 0.7),
-        inset 0 0 30px rgba(255,255,255,0.7);
-    border: 3px solid #00ffff;
     transform: scale(1.1);
-    animation: rapidPulseCyan 2s infinite ease-in-out;
 }
 .orb-container.listening .orb-text {
     opacity: 0.8;
@@ -344,13 +327,7 @@ body {
 
 /* Executing */
 .orb-container.executing .orb-core {
-    background: radial-gradient(circle at 50% 50%, rgba(10, 60, 40, 0.9) 0%, rgba(0, 200, 150, 0.9) 60%, #000 100%);
-    box-shadow: 
-        0 0 50px rgba(0, 255, 170, 0.7),
-        inset 0 0 30px rgba(255,255,255,0.9);
-    border-color: #00ffaa;
     transform: scale(1.05);
-    animation: rapidPulseGreen 2s infinite ease-in-out;
 }
 
 /* Hologram Rings */

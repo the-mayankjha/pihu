@@ -22,6 +22,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-draggable": "^4.5.0",
+    "three": "^0.184.0",
     "vosk-browser": "^0.0.8"
   }
 }
