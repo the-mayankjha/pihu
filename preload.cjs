@@ -24,5 +24,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => {
             ipcRenderer.removeListener('system-stats', subscription);
         };
+    },
+    saveConfig: (config) => {
+        ipcRenderer.send('save-config', config);
     }
 });

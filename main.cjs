@@ -65,6 +65,22 @@ function createWindow() {
     app.quit();
   });
 
+  // Handle IPC call to save setting configs (e.g. Porcupine AccessKey)
+  ipcMain.on('save-config', (event, config) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const configPath = path.join(__dirname, 'config.json');
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+      console.log('[Config] Config successfully saved to disk:', config);
+      
+      // Dynamic restart to apply changes without reloading Electron!
+      restartPythonEngine();
+    } catch (err) {
+      console.error('[Config ERROR] Failed to write config.json:', err);
+    }
+  });
+
   // Start real-time Apple IO system stats monitoring
   let startCPU = getCPUUsage();
   let statsInterval = setInterval(() => {
@@ -132,6 +148,17 @@ function getCPUUsage() {
   }
   const total = user + nice + sys + idle + irq;
   return { idle, total };
+}
+
+function restartPythonEngine() {
+    console.log("[Config] Terminating active Python voice process...");
+    if (pythonProcess) {
+        pythonProcess.kill('SIGINT');
+        pythonProcess = null;
+    }
+    setTimeout(() => {
+        startPythonEngine();
+    }, 600);
 }
 
 function startPythonEngine() {

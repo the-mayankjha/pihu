@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
 const SettingsPanel = ({ isVisible, onClose, theme, setTheme, displayMode, setDisplayMode }) => {
-  if (!isVisible) return null;
-
   const [activeTab, setActiveTab] = useState('appearance');
 
   // Load state from localStorage or default
@@ -14,6 +12,9 @@ const SettingsPanel = ({ isVisible, onClose, theme, setTheme, displayMode, setDi
   const [startOnBoot, setStartOnBoot] = useState(() => localStorage.getItem('pihu_boot') === 'true');
   const [hideDockIcon, setHideDockIcon] = useState(() => localStorage.getItem('pihu_dock') === 'true');
   const [shortcutKey, setShortcutKey] = useState(() => localStorage.getItem('pihu_shortcut') || 'Alt + P');
+
+  const [wakeEngine, setWakeEngine] = useState(() => localStorage.getItem('pihu_wake_engine') || 'whisper');
+  const [accessKey, setAccessKey] = useState(() => localStorage.getItem('pihu_access_key') || '');
 
   // Sync to localStorage
   useEffect(() => {
@@ -33,6 +34,21 @@ const SettingsPanel = ({ isVisible, onClose, theme, setTheme, displayMode, setDi
   useEffect(() => { localStorage.setItem('pihu_boot', startOnBoot); }, [startOnBoot]);
   useEffect(() => { localStorage.setItem('pihu_dock', hideDockIcon); }, [hideDockIcon]);
   useEffect(() => { localStorage.setItem('pihu_shortcut', shortcutKey); }, [shortcutKey]);
+  useEffect(() => { localStorage.setItem('pihu_wake_engine', wakeEngine); }, [wakeEngine]);
+  useEffect(() => { localStorage.setItem('pihu_access_key', accessKey); }, [accessKey]);
+
+  // Debounced sync to config.json on disk
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (window.electronAPI && window.electronAPI.saveConfig) {
+        window.electronAPI.saveConfig({
+          access_key: accessKey,
+          engine: wakeEngine
+        });
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [wakeEngine, accessKey]);
 
   const handleQuitApp = () => {
     if (window.electronAPI && window.electronAPI.quitApp) {
@@ -41,6 +57,8 @@ const SettingsPanel = ({ isVisible, onClose, theme, setTheme, displayMode, setDi
       alert("Quit requested. (Electron process bridge not active)");
     }
   };
+
+  if (!isVisible) return null;
 
   return (
     <div 
@@ -240,6 +258,39 @@ const SettingsPanel = ({ isVisible, onClose, theme, setTheme, displayMode, setDi
                     </button>
                   </div>
                 </div>
+
+                <div className="settings-section">
+                  <div className="slider-row">
+                    <h3>WAKE DETECTION ENGINE</h3>
+                  </div>
+                  <div className="capsule-option-group">
+                    <button 
+                      className={`capsule-btn ${wakeEngine === 'whisper' ? 'active' : ''}`}
+                      onClick={() => setWakeEngine('whisper')}
+                    >
+                      Whisper VAD (Local)
+                    </button>
+                    <button 
+                      className={`capsule-btn ${wakeEngine === 'openwakeword' ? 'active' : ''}`}
+                      onClick={() => setWakeEngine('openwakeword')}
+                    >
+                      openWakeWord (Local)
+                    </button>
+                  </div>
+                  <p className="slider-hint">Choose between local Whisper acoustic VAD or high-precision openWakeWord.</p>
+                </div>
+
+                {wakeEngine === 'openwakeword' && (
+                  <div className="settings-section fade-in">
+                    <h3>OPENWAKEWORD CONFIGURATION</h3>
+                    <p className="slider-hint" style={{ color: '#ffffff', opacity: 0.9, lineHeight: '1.5' }}>
+                      🟢 <strong>100% Free, Local & Private:</strong> No API keys or tokens required! Runs extremely fast using native ONNX runtime on your CPU.
+                    </p>
+                    <p className="slider-hint" style={{ marginTop: '8px', lineHeight: '1.5' }}>
+                      To use custom wake words, drop your trained <code>.onnx</code> model files inside the <code>wakeword_models/</code> folder in your project directory. If no custom models are present, openWakeWord will automatically listen to built-in keywords: <strong>"Hey Jarvis"</strong> and <strong>"Alexa"</strong>.
+                    </p>
+                  </div>
+                )}
 
                 <div className="settings-section">
                   <div className="slider-row">

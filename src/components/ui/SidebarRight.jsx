@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
 const SidebarRight = ({ isVisible }) => {
-  if (!isVisible) return null;
-
   // State to hold live Apple IO telemetry
   const [stats, setStats] = useState({
     cpu: 23,
@@ -49,6 +47,8 @@ const SidebarRight = ({ isVisible }) => {
     if (!linePath) return '';
     return `${linePath} L ${width},${height} L 0,${height} Z`;
   };
+
+  if (!isVisible) return null;
 
   return (
     <aside className="sidebar-right glass-panel">
