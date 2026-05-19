@@ -26,9 +26,42 @@ const App = () => {
   const [theme, setTheme] = useState('nebula');
   const [displayMode, setDisplayMode] = useState('full-orb');
   const [showSettings, setShowSettings] = useState(false);
+  const [username, setUsername] = useState(() => localStorage.getItem('pihu_username') || 'Mayank');
+
+  useEffect(() => {
+    localStorage.setItem('pihu_username', username);
+  }, [username]);
 
   const addTerminalLine = useCallback((text, color = 'cyan') => {
     setLogs(prev => [...prev, { text, color }]);
+  }, []);
+
+  const speakText = useCallback((text) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => v.name.includes('Samantha') || v.name.includes('Daniel') || v.name.includes('Siri'));
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+      
+      utterance.rate = 1.02;
+      utterance.pitch = 1.0;
+      
+      utterance.onstart = () => {
+        setVoiceState('speaking');
+      };
+      
+      utterance.onend = () => {
+        setVoiceState('listening');
+      };
+      
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.warn("Speech Synthesis is not supported.");
+    }
   }, []);
 
   const activatePIHU = useCallback(() => {
@@ -65,22 +98,17 @@ const App = () => {
     setTimeout(() => {
       if (command.includes('deactivate') || command.includes('sleep') || command.includes('goodbye')) {
         addTerminalLine('Deactivating core systems...', 'magenta');
+        speakText('Goodbye Mayank. Powering down.');
         deactivatePIHU();
       } else if (command.includes('network')) {
         addTerminalLine('Scanning local network interfaces...', 'cyan');
-        setVoiceState('speaking');
-        setTimeout(() => {
-          setVoiceState('listening');
-        }, 2000);
+        speakText('Scanning local network interfaces.');
       } else {
         addTerminalLine(`Command unrecognized: ${command}`, 'magenta');
-        setVoiceState('speaking');
-        setTimeout(() => {
-          setVoiceState('listening');
-        }, 2000);
+        speakText(`Sorry, I did not recognize the command: ${command}`);
       }
     }, 1200);
-  }, [addTerminalLine, deactivatePIHU]);
+  }, [addTerminalLine, deactivatePIHU, speakText]);
 
   // Handle global hotkeys
   useEffect(() => {
@@ -112,6 +140,9 @@ const App = () => {
         } else if (event.event === 'waking') {
           console.log("🔊 Wake word detected:", event.text);
           activatePIHU();
+          
+          addTerminalLine(`P.I.H.U: Hello ${username}! What would you like to do?`, 'green');
+          speakText(`Hello ${username}! What would you like to do?`);
           
           setTranscriptionText(event.text);
           setShowTranscription(true);
@@ -147,7 +178,7 @@ const App = () => {
         if (unsubscribe) unsubscribe();
       };
     }
-  }, [isActive, voiceState, activatePIHU, handleCommand, addTerminalLine]);
+  }, [isActive, voiceState, activatePIHU, handleCommand, addTerminalLine, username, speakText]);
 
   // Blur overlay dynamic class
   const blurClass = `blur-overlay ${isActive ? 'active' : ''}`;
@@ -343,6 +374,8 @@ const App = () => {
         setTheme={setTheme}
         displayMode={displayMode}
         setDisplayMode={setDisplayMode}
+        userName={username}
+        setUserName={setUsername}
       />
 
       <footer className="pihu-unified-footer">

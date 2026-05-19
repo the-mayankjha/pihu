@@ -154,16 +154,17 @@ emit({"event": "log", "message": "Listening..."})
 frames = []
 is_speaking = False
 silence_counter = 0
-SILENCE_LIMIT = 30 # ~0.9 seconds of silence triggers end of speech
+STANDBY_SILENCE_LIMIT = 12 # ~360ms silence before triggering wake word VAD (snappy!)
+ACTIVE_SILENCE_LIMIT = 20 # ~600ms silence before finishing active commands (prevents cutoff)
 WAKE_MODE = False
 
 # Calibrate background noise floor (useful for fallback Whisper VAD)
 emit({"event": "log", "message": "Calibrating background noise floor..."})
 bg_rms_values = []
-for _ in range(int(1000 / FRAME_DURATION_MS)):
+for _ in range(int(200 / FRAME_DURATION_MS)): # 200ms is 5x faster and perfectly accurate!
     frame = stream.read(WHISPER_CHUNK, exception_on_overflow=False)
     bg_rms_values.append(calculate_rms(frame))
-bg_rms = float(np.mean(bg_rms_values))
+bg_rms = min(300, float(np.mean(bg_rms_values))) # Cap background noise to prevent unreachable thresholds
 emit({"event": "calibration_complete", "rms": bg_rms})
 emit({"event": "log", "message": f"Calibration complete. Background RMS: {bg_rms:.2f}"})
 
@@ -219,10 +220,11 @@ try:
                     silence_counter = 0
                     continue
                 
-                # Speech sensitivity check
-                threshold = max(300, bg_rms + 300)
-                if rms > threshold:
-                    # Capture speech frame in standby to check if it's the wake word
+                # Speech sensitivity check (higher threshold avoids false-triggers on noise)
+                threshold = max(450, bg_rms + 350)
+                
+                # Check for continuous recording length (max 1.65 seconds for standby wake)
+                if rms > threshold and len(frames) < 55:
                     if not is_speaking:
                         is_speaking = True
                         emit({"event": "speech_start"})
@@ -231,7 +233,7 @@ try:
                 elif is_speaking:
                     frames.append(frame)
                     silence_counter += 1
-                    if silence_counter > SILENCE_LIMIT:
+                    if silence_counter > STANDBY_SILENCE_LIMIT or len(frames) >= 55:
                         is_speaking = False
                         emit({"event": "speech_end"})
                         
@@ -243,7 +245,7 @@ try:
                         if len(audio_np) > SAMPLE_RATE * 0.5:
                             segments, info = model.transcribe(
                                 audio_np, 
-                                beam_size=5, 
+                                beam_size=1, # Greedy decoding (beam=1) is twice as fast and extremely accurate for wake words!
                                 vad_filter=True,
                                 initial_prompt="Hey Pihu, okay pihu, hello pihu, peehoo, peewhoo, hey peewhu"
                             )
@@ -255,10 +257,10 @@ try:
         
         # --- B: Active Mode (Capturing Spoken Command) ---
         else:
-            threshold = max(300, bg_rms + 250)
+            threshold = max(400, bg_rms + 250)
             speech_active = rms > threshold
             
-            if speech_active:
+            if speech_active and len(frames) < 150: # Max 4.5 seconds of command capture
                 if not is_speaking:
                     is_speaking = True
                     emit({"event": "log", "message": f"Speech started (RMS: {rms:.2f})"})
@@ -268,7 +270,7 @@ try:
             elif is_speaking:
                 frames.append(frame)
                 silence_counter += 1
-                if silence_counter > SILENCE_LIMIT:
+                if silence_counter > ACTIVE_SILENCE_LIMIT or len(frames) >= 150:
                     is_speaking = False
                     emit({"event": "speech_end"})
                     
@@ -281,7 +283,7 @@ try:
                     if len(audio_np) > SAMPLE_RATE * 0.5:
                         segments, info = model.transcribe(
                             audio_np, 
-                            beam_size=5, 
+                            beam_size=3, # Beam size 3 balance for general command accuracy vs speed
                             vad_filter=True,
                             initial_prompt="Hey Pihu, okay pihu, hello pihu, peehoo, peewhoo, hey peewhu"
                         )

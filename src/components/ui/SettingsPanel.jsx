@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const SettingsPanel = ({ isVisible, onClose, theme, setTheme, displayMode, setDisplayMode }) => {
+const SettingsPanel = ({ isVisible, onClose, theme, setTheme, displayMode, setDisplayMode, userName, setUserName }) => {
   const [activeTab, setActiveTab] = useState('appearance');
 
   // Load state from localStorage or default
@@ -159,6 +159,21 @@ const SettingsPanel = ({ isVisible, onClose, theme, setTheme, displayMode, setDi
                       <span>MINI ORB</span>
                     </div>
                   </div>
+                </div>
+
+                <div className="settings-section">
+                  <h3>USER PROFILE & GREETING</h3>
+                  <div className="shortcut-input-wrapper" style={{ marginTop: '8px' }}>
+                    <input 
+                      type="text" 
+                      className="glass-shortcut-input"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      placeholder="Enter your name..."
+                      style={{ width: '100%', outline: 'none' }}
+                    />
+                  </div>
+                  <p className="slider-hint">Your assistant will greet you by this name when waking up.</p>
                 </div>
 
                 <div className="settings-section">

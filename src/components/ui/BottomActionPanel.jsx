@@ -36,9 +36,21 @@ const BottomActionPanel = ({ voiceState, isVisible }) => {
       
       <div className="action-status">
         <div className="primary-text">
-          {voiceState === 'listening' ? 'Listening...' : voiceState === 'executing' ? 'Processing...' : 'Connecting...'}
+          {voiceState === 'listening' && 'Listening...'}
+          {voiceState === 'waking' && 'Waking up...'}
+          {voiceState === 'thinking' && 'Thinking...'}
+          {voiceState === 'executing' && 'Processing...'}
+          {voiceState === 'speaking' && 'Speaking...'}
+          {voiceState === 'idle' && 'Active'}
+          {!['listening', 'waking', 'thinking', 'executing', 'speaking', 'idle'].includes(voiceState) && 'Connecting...'}
         </div>
-        <div className="secondary-text">Speak now</div>
+        <div className="secondary-text">
+          {voiceState === 'listening' ? 'Speak now' : 
+           voiceState === 'waking' ? 'Get ready' : 
+           voiceState === 'thinking' ? 'Analyzing...' : 
+           voiceState === 'executing' ? 'Running command' : 
+           voiceState === 'speaking' ? 'Assistant speaking' : 'Speak now'}
+        </div>
       </div>
       
       <div className="waveform-wrapper">
