@@ -11,25 +11,15 @@ P.I.H.U OS is a translucent overlay utility designed to feel like an ambient, fu
 ---
 
 ## 📸 Interface Preview
+<p align="center">
+<img width="1699" height="1063" alt="image" src="https://github.com/user-attachments/assets/671ec63e-8d07-4dd3-9bdd-21bc6da80f04" />
+<em>P.I.H.U -Inactive State (IDLE)</em>
+</p>
 
-```
-+-------------------------------------------------------------+
-|                                                             |
-|   [  P.I.H.U  ]                                             |
-|                                                             |
-|                          *  .   *                           |
-|                       .   .   *   .                         |
-|                     .  *  ( Orb )  . .                      |
-|                       .   .   *   .                         |
-|                          *  .   *                           |
-|                                                             |
-|                      "Active Listening..."                  |
-|                 |||||||||||||||||||||||||||||               |
-|                                                             |
-+-------------------------------------------------------------+
-```
-*(Screenshot Placeholder - Add your premium custom UI screenshots here!)*
-
+<p align="center">
+<img width="1706" height="1056" alt="image" src="https://github.com/user-attachments/assets/2b194f13-5388-48f3-926d-1adfe88bec37" />
+<em>P.I.H.U - Active State (Listening)</em>
+</p>
 ---
 
 ## 🛠️ System Architecture
