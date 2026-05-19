@@ -6,4 +6,5 @@ implementations
 .venv/
 venv/
 dist/
-
+backend/heypihu/pihu-env/
+backend/heypihu/

@@ -81,39 +81,73 @@ def calculate_rms(frame_bytes):
     audio_data = np.frombuffer(frame_bytes, dtype=np.int16)
     return np.sqrt(np.mean(audio_data.astype(np.float32)**2))
 
-p = pyaudio.PyAudio()
-
-# Find macOS Built-in Microphone or fallback to default
-device_index = None
-default_device_info = p.get_default_input_device_info()
-device_name = default_device_info.get("name")
-
-for i in range(p.get_device_count()):
-    info = p.get_device_info_by_index(i)
-    if info.get('maxInputChannels') > 0:
-        if 'MacBook' in info.get('name') and 'Microphone' in info.get('name'):
-            device_index = i
-            device_name = info.get('name')
-            break
-
-emit({"event": "log", "message": f"Using Audio Input: {device_name}"})
-
-# Open dynamic stream
 try:
+    p = pyaudio.PyAudio()
+
+    # Find macOS Built-in Microphone or fallback to default
+    device_index = None
+    default_device_info = p.get_default_input_device_info()
+    device_name = default_device_info.get("name")
+
+    for i in range(p.get_device_count()):
+        info = p.get_device_info_by_index(i)
+        if info.get('maxInputChannels') > 0:
+            if 'MacBook' in info.get('name') and 'Microphone' in info.get('name'):
+                device_index = i
+                device_name = info.get('name')
+                break
+
+    emit({"event": "log", "message": f"Using Audio Input: {device_name}"})
+
+    # Open dynamic stream
     stream = p.open(format=pyaudio.paInt16,
                     channels=1,
                     rate=SAMPLE_RATE,
                     input=True,
                     input_device_index=device_index,
                     frames_per_buffer=1024) # larger buffer prevents overflow
+except KeyboardInterrupt:
+    emit({"event": "log", "message": "Exiting during initialization..."})
+    sys.exit(0)
 except Exception as e:
     emit({"event": "error", "message": f"Microphone error: {str(e)}"})
     sys.exit(1)
 
 def is_wake_word(text):
-    # Regex for Pihu variations
     text = text.lower().strip()
-    return bool(re.search(r'\b(hey |hi |wake up |good morning |goodmorning )?(pihu|pewho|peehoo|pee who|pee-who|p\.i\.h\.u|pu|pee-whoo|peewhoo)\b', text))
+    # Remove punctuation
+    text = re.sub(r'[^\w\s]', '', text)
+    
+    # Variations of Pihu itself
+    pihu_variations = r'(pihu|pewho|peehoo|pee\s+who|pee\s+whoo|peewhoo|pehu|peehu|pi\s+hu|peewhu)'
+    
+    # Direct phonetic matches for Whisper hallucinations of "Pihu"
+    hallucinations = [
+        r'\bhype\s+you\b',
+        r'\bhigh\s+view\b',
+        r'\bhope\s+you\b',
+        r'\bbehold\b',
+        r'\btype\s+b1\b',
+        r'\bhow\s+do\s+you\s+hear\b',
+        r'\bill\s+beat\s+you\b',
+        r'\bi\s+feel\b',
+        r'\bthank\s+you\b',
+    ]
+    
+    # Check if the text matches either "pihu" variants on their own or with a greeting
+    pattern = rf'\b(hey|okay|ok|hello|hi|wake\s+up|good\s+morning)?\s*{pihu_variations}\b'
+    
+    # Also handle "hey people" or "hi people" as a likely mis-transcription of "hey pihu"
+    mis_transcriptions = r'\b(hey|okay|ok|hello|hi|wake\s+up)\s+(people|pear|peer)\b'
+    
+    if bool(re.search(pattern, text)) or bool(re.search(mis_transcriptions, text)):
+        return True
+        
+    for hal in hallucinations:
+        if bool(re.search(hal, text)):
+            return True
+            
+    return False
 
 emit({"event": "log", "message": "Listening..."})
 
@@ -207,7 +241,12 @@ try:
                         
                         audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
                         if len(audio_np) > SAMPLE_RATE * 0.5:
-                            segments, info = model.transcribe(audio_np, beam_size=5, vad_filter=True)
+                            segments, info = model.transcribe(
+                                audio_np, 
+                                beam_size=5, 
+                                vad_filter=True,
+                                initial_prompt="Hey Pihu, okay pihu, hello pihu, peehoo, peewhoo, hey peewhu"
+                            )
                             text = " ".join([segment.text for segment in segments]).strip()
                             if text and is_wake_word(text):
                                 emit({"event": "log", "message": f"Whisper wake word detected: {text}"})
@@ -240,7 +279,12 @@ try:
                     audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
                     
                     if len(audio_np) > SAMPLE_RATE * 0.5:
-                        segments, info = model.transcribe(audio_np, beam_size=5, vad_filter=True)
+                        segments, info = model.transcribe(
+                            audio_np, 
+                            beam_size=5, 
+                            vad_filter=True,
+                            initial_prompt="Hey Pihu, okay pihu, hello pihu, peehoo, peewhoo, hey peewhu"
+                        )
                         text = " ".join([segment.text for segment in segments]).strip()
                         
                         if text:
