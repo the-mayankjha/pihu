@@ -39,6 +39,11 @@ const App = () => {
   const speakText = useCallback((text) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      // Ensure python engine is muted while we speak to prevent self-feedback loop
+      if (window.electronAPI && window.electronAPI.setPythonListening) {
+        window.electronAPI.setPythonListening(false);
+      }
+      
       const utterance = new SpeechSynthesisUtterance(text);
       
       const voices = window.speechSynthesis.getVoices();
@@ -54,9 +59,15 @@ const App = () => {
         setVoiceState('speaking');
       };
       
-      utterance.onend = () => {
+      const handleSpeechEnd = () => {
         setVoiceState('listening');
+        if (window.electronAPI && window.electronAPI.setPythonListening) {
+          window.electronAPI.setPythonListening(true);
+        }
       };
+      
+      utterance.onend = handleSpeechEnd;
+      utterance.onerror = handleSpeechEnd;
       
       window.speechSynthesis.speak(utterance);
     } else {

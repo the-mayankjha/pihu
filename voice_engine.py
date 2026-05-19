@@ -1,6 +1,7 @@
 import sys
 import json
 import pyaudio
+import threading
 import numpy as np
 from faster_whisper import WhisperModel
 import time
@@ -58,24 +59,77 @@ if use_openwakeword:
         emit({"event": "log", "message": f"Failed to initialize openWakeWord: {str(e)}. Falling back to local Whisper VAD engine."})
         use_openwakeword = False
 
-# 3. Initialize Faster-Whisper Model for high-accuracy local dictation
+# 3. Initialize Faster-Whisper and Silero VAD Models
 try:
     model = WhisperModel("tiny.en", device="cpu", compute_type="int8")
     emit({"event": "log", "message": "Faster-Whisper Model loaded successfully."})
+    
+    from faster_whisper.vad import get_vad_model
+    vad_model = get_vad_model()
+    emit({"event": "log", "message": "Silero VAD Model loaded successfully."})
 except Exception as e:
-    emit({"event": "error", "message": f"Failed to load Faster-Whisper model: {str(e)}"})
+    emit({"event": "error", "message": f"Failed to load Faster-Whisper/VAD model: {str(e)}"})
     sys.exit(1)
+
+class StreamingVAD:
+    def __init__(self, session):
+        self.session = session
+        self.reset()
+        
+    def reset(self):
+        # Silero VAD v4 hidden & cell states: shape (1, 1, 128)
+        self.h = np.zeros((1, 1, 128), dtype="float32")
+        self.c = np.zeros((1, 1, 128), dtype="float32")
+        # rolling receptive context context window: 64 samples
+        self.context = np.zeros((1, 64), dtype="float32")
+        
+    def process_chunk(self, audio_chunk):
+        # audio_chunk should be a 1D float32 numpy array of size 512
+        assert audio_chunk.shape[0] == 512
+        
+        # Prepare context and chunk
+        chunk_with_context = np.concatenate([self.context[0], audio_chunk])
+        chunk_with_context = chunk_with_context.reshape(1, 576)
+        
+        # Update context
+        self.context = audio_chunk[-64:].reshape(1, 64)
+        
+        # Run model session
+        output, hn, cn = self.session.run(
+            None,
+            {"input": chunk_with_context, "h": self.h, "c": self.c}
+        )
+        
+        # Update states
+        self.h = hn
+        self.c = cn
+        
+        return float(output[0])
+
+# Background thread to listen to non-blocking commands from Electron (e.g. MUTE/UNMUTE during speech playback)
+muted = False
+
+def stdin_listener():
+    global muted
+    for line in sys.stdin:
+        cmd = line.strip().upper()
+        if cmd == "MUTE":
+            muted = True
+            # Flush active speech frames immediately
+            global active_speech_frames, active_speech_started, consecutive_speech_seconds, silence_seconds
+            active_speech_started = False
+            active_speech_frames = []
+            consecutive_speech_seconds = 0.0
+            silence_seconds = 0.0
+        elif cmd == "UNMUTE":
+            muted = False
+
+threading.Thread(target=stdin_listener, daemon=True).start()
 
 # 4. Audio Configuration
 SAMPLE_RATE = 16000
-FRAME_DURATION_MS = 30
-WHISPER_CHUNK = int(SAMPLE_RATE * FRAME_DURATION_MS / 1000) # 480 samples (30ms)
-
-# openWakeWord operates on 1280 samples chunks (80ms at 16000Hz)
-OWW_CHUNK = 1280
-
-# Determine standby read size
-STANDBY_CHUNK = OWW_CHUNK if use_openwakeword else WHISPER_CHUNK
+VAD_CHUNK = 512  # 32ms at 16kHz
+OWW_CHUNK = 1280 # openWakeWord chunk size (80ms)
 
 def calculate_rms(frame_bytes):
     audio_data = np.frombuffer(frame_bytes, dtype=np.int16)
@@ -118,6 +172,12 @@ def is_wake_word(text):
     # Remove punctuation
     text = re.sub(r'[^\w\s]', '', text)
     
+    # Ignore Whisper repetitive hallucinations
+    words = text.split()
+    for w in set(words):
+        if words.count(w) >= 3:
+            return False
+            
     # Variations of Pihu itself
     pihu_variations = r'(pihu|pewho|peehoo|pee\s+who|pee\s+whoo|peewhoo|pehu|peehu|pi\s+hu|peewhu)'
     
@@ -151,18 +211,26 @@ def is_wake_word(text):
 
 emit({"event": "log", "message": "Listening..."})
 
-frames = []
-is_speaking = False
-silence_counter = 0
-STANDBY_SILENCE_LIMIT = 12 # ~360ms silence before triggering wake word VAD (snappy!)
-ACTIVE_SILENCE_LIMIT = 20 # ~600ms silence before finishing active commands (prevents cutoff)
+# Initialize VAD tracking variables
+streaming_vad = StreamingVAD(vad_model.session)
 WAKE_MODE = False
 
-# Calibrate background noise floor (useful for fallback Whisper VAD)
+active_speech_started = False
+active_speech_frames = []
+active_start_time = 0.0
+silence_seconds = 0.0
+consecutive_speech_seconds = 0.0
+
+standby_speech_started = False
+standby_speech_frames = []
+standby_silence_seconds = 0.0
+standby_speech_seconds = 0.0
+
+# Calibrate background noise floor (useful for fallback clap detection)
 emit({"event": "log", "message": "Calibrating background noise floor..."})
 bg_rms_values = []
-for _ in range(int(200 / FRAME_DURATION_MS)): # 200ms is 5x faster and perfectly accurate!
-    frame = stream.read(WHISPER_CHUNK, exception_on_overflow=False)
+for _ in range(int(200 / 32)): # 200ms calibration
+    frame = stream.read(VAD_CHUNK, exception_on_overflow=False)
     bg_rms_values.append(calculate_rms(frame))
 bg_rms = min(300, float(np.mean(bg_rms_values))) # Cap background noise to prevent unreachable thresholds
 emit({"event": "calibration_complete", "rms": bg_rms})
@@ -171,11 +239,21 @@ emit({"event": "log", "message": f"Calibration complete. Background RMS: {bg_rms
 try:
     while True:
         # Determine chunk size dynamically based on current state
-        # If we are in WAKE_MODE (capturing spoken command), we read WHISPER_CHUNK (480)
-        # If we are in standby and use_openwakeword is active, we read STANDBY_CHUNK (1280)
-        current_chunk = WHISPER_CHUNK if (WAKE_MODE or not use_openwakeword) else STANDBY_CHUNK
+        if WAKE_MODE:
+            current_chunk = VAD_CHUNK
+        else:
+            current_chunk = OWW_CHUNK if use_openwakeword else VAD_CHUNK
         
         frame = stream.read(current_chunk, exception_on_overflow=False)
+        
+        # If the engine is muted (TTS speaking), discard the audio to prevent self-feedback
+        if muted:
+            active_speech_started = False
+            active_speech_frames = []
+            consecutive_speech_seconds = 0.0
+            silence_seconds = 0.0
+            continue
+            
         rms = calculate_rms(frame)
         
         # --- A: Standby Mode (Listening for Wake Word) ---
@@ -202,12 +280,16 @@ try:
                         WAKE_MODE = True
                         emit({"event": "waking", "text": f"Wake Word: {triggered_word}"})
                         
-                        frames = []
-                        is_speaking = False
-                        silence_counter = 0
+                        # Initialize active streaming variables
+                        streaming_vad.reset()
+                        active_speech_started = False
+                        active_speech_frames = []
+                        active_start_time = time.time()
+                        silence_seconds = 0.0
+                        consecutive_speech_seconds = 0.0
                         continue
             else:
-                # 2. Process via Fallback Whisper VAD (Clap or speech wake detection)
+                # 2. Process via Fallback Clap & Stateful Silero VAD
                 # Clap detection (very high RMS spike)
                 clap_threshold = max(6000, bg_rms * 6)
                 if rms > clap_threshold:
@@ -215,87 +297,148 @@ try:
                     WAKE_MODE = True
                     emit({"event": "waking", "text": "Clap detected"})
                     
-                    frames = []
-                    is_speaking = False
-                    silence_counter = 0
+                    # Initialize active streaming variables
+                    streaming_vad.reset()
+                    active_speech_started = False
+                    active_speech_frames = []
+                    active_start_time = time.time()
+                    silence_seconds = 0.0
+                    consecutive_speech_seconds = 0.0
                     continue
                 
-                # Speech sensitivity check (higher threshold avoids false-triggers on noise)
-                threshold = max(450, bg_rms + 350)
-                
-                # Check for continuous recording length (max 1.65 seconds for standby wake)
-                if rms > threshold and len(frames) < 55:
-                    if not is_speaking:
-                        is_speaking = True
-                        emit({"event": "speech_start"})
-                    frames.append(frame)
-                    silence_counter = 0
-                elif is_speaking:
-                    frames.append(frame)
-                    silence_counter += 1
-                    if silence_counter > STANDBY_SILENCE_LIMIT or len(frames) >= 55:
-                        is_speaking = False
-                        emit({"event": "speech_end"})
-                        
-                        audio_data = b''.join(frames)
-                        frames = []
-                        silence_counter = 0
-                        
-                        audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
-                        if len(audio_np) > SAMPLE_RATE * 0.5:
-                            segments, info = model.transcribe(
-                                audio_np, 
-                                beam_size=1, # Greedy decoding (beam=1) is twice as fast and extremely accurate for wake words!
-                                vad_filter=True,
-                                initial_prompt="Hey Pihu, okay pihu, hello pihu, peehoo, peewhoo, hey peewhu"
-                            )
-                            text = " ".join([segment.text for segment in segments]).strip()
-                            if text and is_wake_word(text):
-                                emit({"event": "log", "message": f"Whisper wake word detected: {text}"})
-                                WAKE_MODE = True
-                                emit({"event": "waking", "text": text})
-        
-        # --- B: Active Mode (Capturing Spoken Command) ---
-        else:
-            threshold = max(400, bg_rms + 250)
-            speech_active = rms > threshold
-            
-            if speech_active and len(frames) < 150: # Max 4.5 seconds of command capture
-                if not is_speaking:
-                    is_speaking = True
-                    emit({"event": "log", "message": f"Speech started (RMS: {rms:.2f})"})
-                    emit({"event": "speech_start"})
-                frames.append(frame)
-                silence_counter = 0
-            elif is_speaking:
-                frames.append(frame)
-                silence_counter += 1
-                if silence_counter > ACTIVE_SILENCE_LIMIT or len(frames) >= 150:
-                    is_speaking = False
-                    emit({"event": "speech_end"})
+                # Dynamic Silero VAD check for fallback speech wake word
+                audio_np = np.frombuffer(frame, dtype=np.int16).astype(np.float32) / 32768.0
+                if len(audio_np) == VAD_CHUNK:
+                    prob = streaming_vad.process_chunk(audio_np)
                     
-                    audio_data = b''.join(frames)
-                    frames = []
-                    silence_counter = 0
-                    
-                    audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
-                    
-                    if len(audio_np) > SAMPLE_RATE * 0.5:
-                        segments, info = model.transcribe(
-                            audio_np, 
-                            beam_size=3, # Beam size 3 balance for general command accuracy vs speed
-                            vad_filter=True,
-                            initial_prompt="Hey Pihu, okay pihu, hello pihu, peehoo, peewhoo, hey peewhu"
-                        )
-                        text = " ".join([segment.text for segment in segments]).strip()
-                        
-                        if text:
-                            emit({"event": "command", "text": text})
+                    if not standby_speech_started:
+                        if prob > 0.55:
+                            standby_speech_seconds += 0.032
+                            if standby_speech_seconds >= 0.25: # validated human speech (250ms)
+                                standby_speech_started = True
+                                standby_speech_frames = [frame]
+                                standby_silence_seconds = 0.0
                         else:
-                            emit({"event": "log", "message": "No command heard, returning to standby."})
-                        
-                        # Go back to standby wake monitoring after processing the command
+                            standby_speech_seconds = max(0.0, standby_speech_seconds - 0.032)
+                    else:
+                        standby_speech_frames.append(frame)
+                        if prob > 0.45:
+                            standby_silence_seconds = 0.0
+                        else:
+                            standby_silence_seconds += 0.032
+                            
+                            # Max 2.5 seconds of wake speech, or 0.6 seconds of trailing silence
+                            if standby_silence_seconds >= 0.6 or len(standby_speech_frames) >= 78:
+                                standby_speech_started = False
+                                standby_speech_seconds = 0.0
+                                
+                                audio_data = b''.join(standby_speech_frames)
+                                standby_speech_frames = []
+                                
+                                # Validate RMS level of the captured speech before transcribing!
+                                rms_val = calculate_rms(audio_data)
+                                if rms_val < max(280, bg_rms * 1.7):
+                                    emit({"event": "log", "message": f"Standby VAD: Discarding quiet segment (RMS: {rms_val:.2f} < threshold)"})
+                                    continue
+                                    
+                                audio_np_full = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+                                if len(audio_np_full) > SAMPLE_RATE * 0.6: # At least 600ms
+                                    segments, info = model.transcribe(
+                                        audio_np_full, 
+                                        beam_size=1, # Greedy wake word decoding is ultra fast!
+                                        vad_filter=True,
+                                        initial_prompt="Hey Pihu, okay pihu, hello pihu, peehoo, peewhoo, hey peewhu"
+                                    )
+                                    text = " ".join([segment.text for segment in segments]).strip()
+                                    if text and is_wake_word(text):
+                                        emit({"event": "log", "message": f"Whisper wake word detected: {text}"})
+                                        WAKE_MODE = True
+                                        emit({"event": "waking", "text": text})
+                                        
+                                        # Initialize active streaming variables
+                                        streaming_vad.reset()
+                                        active_speech_started = False
+                                        active_speech_frames = []
+                                        active_start_time = time.time()
+                                        silence_seconds = 0.0
+                                        consecutive_speech_seconds = 0.0
+        
+        # --- B: Active Mode (Dynamic Endpoint VAD Streaming) ---
+        else:
+            # Convert incoming active frame to float32
+            audio_np = np.frombuffer(frame, dtype=np.int16).astype(np.float32) / 32768.0
+            
+            if len(audio_np) == VAD_CHUNK:
+                prob = streaming_vad.process_chunk(audio_np)
+                
+                # Case 1: Speech has not started yet
+                if not active_speech_started:
+                    # Check safety active idle timeout (5.0 seconds of no speech since wake trigger)
+                    elapsed_since_wake = time.time() - active_start_time
+                    if elapsed_since_wake > 5.0:
+                        emit({"event": "log", "message": "Disarming active mode: No speech detected for 5.0 seconds."})
                         WAKE_MODE = False
+                        continue
+                    
+                    # Accumulate speech frames if probability is high
+                    if prob > 0.55:
+                        consecutive_speech_seconds += 0.032
+                        if consecutive_speech_seconds >= 0.2: # verified speech start (200ms)
+                            active_speech_started = True
+                            emit({"event": "log", "message": f"Silero VAD: Speech confirmed (prob: {prob:.2f})"})
+                            emit({"event": "speech_start"})
+                            active_speech_frames = [frame]
+                            silence_seconds = 0.0
+                    else:
+                        consecutive_speech_seconds = max(0.0, consecutive_speech_seconds - 0.032)
+                
+                # Case 2: User is actively speaking
+                else:
+                    active_speech_frames.append(frame)
+                    
+                    # Track trailing pauses vs continued speech
+                    if prob > 0.45:
+                        silence_seconds = 0.0
+                    else:
+                        silence_seconds += 0.032
+                        
+                        # Dynamic speech endpoint triggered if silence exceeds 1.2 seconds
+                        # Or safe maximum capture limit reached (10.0 seconds)
+                        if silence_seconds >= 1.2 or len(active_speech_frames) >= 312:
+                            active_speech_started = False
+                            emit({"event": "speech_end"})
+                            emit({"event": "log", "message": f"Silero VAD: End of speech detected ({silence_seconds:.1f}s silence). Transcribing..."})
+                            
+                            audio_data = b''.join(active_speech_frames)
+                            active_speech_frames = []
+                            
+                            # Validate RMS level of active command segment
+                            rms_val = calculate_rms(audio_data)
+                            if rms_val < max(250, bg_rms * 1.4):
+                                emit({"event": "log", "message": f"Active VAD: Discarding quiet command segment (RMS: {rms_val:.2f})"})
+                                WAKE_MODE = False
+                                continue
+                                
+                            audio_np_full = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+                            
+                            if len(audio_np_full) > SAMPLE_RATE * 0.5:
+                                segments, info = model.transcribe(
+                                    audio_np_full, 
+                                    beam_size=3, # Beam size 3 for accurate command recognition
+                                    vad_filter=True,
+                                    initial_prompt="Hey Pihu, okay pihu, hello pihu, peehoo, peewhoo, hey peewhu"
+                                )
+                                text = " ".join([segment.text for segment in segments]).strip()
+                                
+                                if text:
+                                    emit({"event": "command", "text": text})
+                                else:
+                                    emit({"event": "log", "message": "Whisper heard nothing. Returning to standby."})
+                            else:
+                                emit({"event": "log", "message": "Audio duration too short. Discarding."})
+                            
+                            # Disarm active mode and go back to standby wake monitoring
+                            WAKE_MODE = False
 
 except KeyboardInterrupt:
     emit({"event": "log", "message": "Exiting..."})

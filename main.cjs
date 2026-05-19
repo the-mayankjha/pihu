@@ -81,6 +81,13 @@ function createWindow() {
     }
   });
 
+  // Handle IPC call to mute/unmute python engine listening
+  ipcMain.on('set-python-listening', (event, listening) => {
+    if (pythonProcess && pythonProcess.stdin && !pythonProcess.stdin.destroyed) {
+      pythonProcess.stdin.write(listening ? "UNMUTE\n" : "MUTE\n");
+    }
+  });
+
   // Start real-time Apple IO system stats monitoring
   let startCPU = getCPUUsage();
   let statsInterval = setInterval(() => {

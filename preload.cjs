@@ -27,5 +27,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     saveConfig: (config) => {
         ipcRenderer.send('save-config', config);
+    },
+    setPythonListening: (listening) => {
+        ipcRenderer.send('set-python-listening', listening);
     }
 });
